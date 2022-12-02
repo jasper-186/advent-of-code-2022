@@ -1,5 +1,5 @@
 fn main() -> anyhow::Result<()> {
-    let lines = include_str!("C:\\Enlistments\\advent-of-code-2022\\day-01\\input").lines();
+    let lines = include_str!("../../input").lines();
     let mut elf_total_calories: Vec<i32> = Vec::new();
     
     let mut current_calories:i32=0;
