@@ -1,48 +1,139 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, panic::AssertUnwindSafe};
 
 use regex::Regex;
 
 fn main() -> anyhow::Result<()> {
     let lines = include_str!("../../input").lines();
-  let mut current_path="".to_string();
 
-  for line in lines{
-    if line.starts_with("$"){
-        let re = Regex::new(r"$ ([a-z]+) ([a-z]+)").unwrap();
-        let caps = re.captures(line).unwrap();
-        
-        let cmd = caps.get(1).map_or("", |m| m.as_str());
-        let arg = caps.get(2).map_or("", |m| m.as_str());
-        
-        if cmd=="ls" {
-            continue;
-        }
+    let mut directories: HashMap<String, Directory> = HashMap::new();
+    let mut current_path = "".to_string();
+    let  current_directory: Directory = Directory {
+        full_name: "/".to_string(),
+        parent: "".to_string(),
+        files: HashMap::new(),
+    };
+    directories.insert("/".to_string(), current_directory);
 
-        if cmd == "cd" {
-            if arg==".."{
-                let mut current_path_parts = current_path.split("/").collect::<Vec<&str>>();
-                
-                // drop the last folder
-                current_path_parts.truncate(current_path_parts.len()-1);
-                let temp = current_path_parts.iter().map(|i| i.to_string()).collect::<Vec<String>>();
-                
-                current_path = temp.join("/");
-                
+    for line in lines {
+        if line.starts_with("$") {
+            let re = Regex::new(r"\$ ([a-z]+) ([a-z/]+)").unwrap();
+            let temp = re.captures(line);
+            let caps = temp.unwrap();
 
+            let cmd = caps.get(1).map_or("", |m| m.as_str());
+            let arg = caps.get(2).map_or("", |m| m.as_str());
 
-
+            if cmd == "ls" {
+                continue;
             }
-        }
 
+            if cmd == "cd" {
+                let parent_directory = current_path.clone();
+                let mut temp_current_path = current_path.clone();
+                // go to the parent directory
+                if arg == ".." {
+                    let parent_dir_name =
+                        directories.get(&parent_directory).unwrap().parent.clone();
+                    let parent_dir = directories.get(&parent_dir_name);
+                    temp_current_path = parent_dir.unwrap().full_name.clone();
+                } else {
+                    if !arg.contains("/") {
+                        temp_current_path += "/";
+                    }
+                    temp_current_path += arg;
+
+                    let existing_dir = directories.contains_key(&temp_current_path).clone();
+                    if !existing_dir {
+                        let n = Directory {
+                            //   name: arg.to_string(),
+                            full_name: temp_current_path.clone(),
+                            parent: directories
+                                .get(&parent_directory)
+                                .unwrap()
+                                .full_name
+                                .clone(),
+                            files: HashMap::new(),
+                        };
+                        directories.insert(temp_current_path.clone(), n);
+                    }
+                }
+
+                current_path = temp_current_path.clone();
+            }
+        } else if line.starts_with("dir") {
+            // dir {dirname}
+            let re = Regex::new(r"dir ([a-z]+)").unwrap();
+            let caps = re.captures(line).unwrap();
+            let dir_name = caps.get(1).map_or("", |m| m.as_str());
+            let mut temp_current_path = current_path.clone();
+
+            if !dir_name.contains("/") {
+                temp_current_path += "/";
+            }
+
+            temp_current_path += dir_name;
+
+            let n = Directory {
+                // name: dir_name.to_string(),
+                full_name: temp_current_path.clone(),
+                parent: current_path.clone(),
+                files: HashMap::new(),
+            };
+
+            directories.insert(temp_current_path, n);
+        } else {
+            // {size} {filename}
+            let parent_directory = current_path.clone();
+
+            let re = Regex::new(r"([0-9]+) ([a-z]+)").unwrap();
+            let caps = re.captures(line).unwrap();
+            let file_size = caps
+                .get(1)
+                .map_or(0, |m| m.as_str().parse::<i32>().unwrap());
+            let file_name = caps.get(2).map_or("", |m| m.as_str());
+            directories
+                .get_mut(&parent_directory)
+                .unwrap()
+                .files
+                .insert(file_name.to_string(), file_size);
+        }
     }
 
-  }
-  //  println!("Index of first message {0}", start_of_packet_marker_index);
+    let mut total =0;
+    for (_,d) in &directories{
+        let t = d.get_size(&directories);
+        if t > 100000{
+            continue;
+        }
+        total = total+t;
+    }
+ 
+
+    println!("total size of dirs under 100000: {0}", total);
     Ok(())
 }
-struct Directory{
-    name: String,
-    parent: String ,
-    child_dirs: Vec<Directory>,
-    files: HashMap<String,i32>
+struct Directory {
+    full_name: String,
+    parent: String,
+    files: HashMap<String, i32>,
+}
+
+impl Directory {
+    pub fn get_size(&self, directories_list: &HashMap<String, Directory>) -> i32 {
+        let keys = directories_list
+            .keys()
+            .filter(|k| k.contains(&self.full_name));
+
+        let mut total_size = 0;
+        for i in keys {
+            let d = directories_list.get(i).unwrap();
+            total_size = total_size + d.get_size(directories_list);
+        }
+
+        for (_, i) in &self.files {
+            total_size = total_size + i;
+        }
+
+        return total_size;
+    }
 }
