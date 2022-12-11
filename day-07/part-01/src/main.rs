@@ -7,7 +7,7 @@ fn main() -> anyhow::Result<()> {
     let lines = include_str!("../../input").lines();
 
     let mut directories: HashMap<String, Directory> = HashMap::new();
-    let mut files: HashMap<String, i32> = HashMap::new();
+    let mut files: HashMap<String, i64> = HashMap::new();
     let mut current_path = "".to_string();
     let  current_directory: Directory = Directory {
         full_name: "/".to_string(),
@@ -99,7 +99,7 @@ fn main() -> anyhow::Result<()> {
             let caps = re.captures(line).unwrap();
             let file_size = caps
                 .get(1)
-                .map_or(0, |m| m.as_str().parse::<i32>().unwrap());
+                .map_or(0, |m| m.as_str().parse::<i64>().unwrap());
             let file_name = caps.get(2).map_or("", |m| m.as_str());
 
             let file_full_name = parent_directory+"/"+file_name;
@@ -111,7 +111,7 @@ fn main() -> anyhow::Result<()> {
            
     let mut dir_sizes: HashMap<String, i64> = HashMap::new();
 
-    for k in directories.keys().sorted().rev(){
+    for k in directories.keys().sorted_by(|a,b| a.len().cmp(&b.len())).rev(){
         
         // get all files in the directory
         let mut dir_total:i64=0;
@@ -129,6 +129,7 @@ fn main() -> anyhow::Result<()> {
         if subdir.len() ==0{
             println!("Directory {0} has no files", k);
         }
+        
         for key in subdir {
             let dir_size = dir_sizes.get(key).unwrap();
             dir_total += dir_size;
@@ -150,6 +151,7 @@ fn main() -> anyhow::Result<()> {
 
     // 28366 is too low
     // 1685109 is too low
+    // 1493167
     println!("total size of dirs under 100000: {0}", small_dir_sizes);
     Ok(())
 }
