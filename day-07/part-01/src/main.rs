@@ -15,17 +15,21 @@ fn main() -> anyhow::Result<()> {
     directories.insert("/".to_string(), current_directory);
 
     for line in lines {
+        println!("processing line: '{0}'", line);
+        println!("directory count: '{0}'", directories.len());
         if line.starts_with("$") {
-            let re = Regex::new(r"\$ ([a-z]+) ([a-z/]+)").unwrap();
+            let re = Regex::new(r"\$ ([a-z]+) ?([a-z/]+)?").unwrap();
             let temp = re.captures(line);
             let caps = temp.unwrap();
 
             let cmd = caps.get(1).map_or("", |m| m.as_str());
-            let arg = caps.get(2).map_or("", |m| m.as_str());
-
+            println!("processing command: '{0}'", cmd);
+           
             if cmd == "ls" {
                 continue;
             }
+
+            let arg = caps.get(2).map_or("", |m| m.as_str());
 
             if cmd == "cd" {
                 let parent_directory = current_path.clone();
@@ -65,6 +69,8 @@ fn main() -> anyhow::Result<()> {
             let re = Regex::new(r"dir ([a-z]+)").unwrap();
             let caps = re.captures(line).unwrap();
             let dir_name = caps.get(1).map_or("", |m| m.as_str());
+
+            println!("processing directory: '{0}'", dir_name);
             let mut temp_current_path = current_path.clone();
 
             if !dir_name.contains("/") {
@@ -83,14 +89,17 @@ fn main() -> anyhow::Result<()> {
             directories.insert(temp_current_path, n);
         } else {
             // {size} {filename}
+
             let parent_directory = current_path.clone();
 
-            let re = Regex::new(r"([0-9]+) ([a-z]+)").unwrap();
+            let re = Regex::new(r"([0-9]+) ([a-z\.]+)").unwrap();
             let caps = re.captures(line).unwrap();
             let file_size = caps
                 .get(1)
                 .map_or(0, |m| m.as_str().parse::<i32>().unwrap());
             let file_name = caps.get(2).map_or("", |m| m.as_str());
+
+            println!("processing file: '{0}'", file_name);
             directories
                 .get_mut(&parent_directory)
                 .unwrap()
