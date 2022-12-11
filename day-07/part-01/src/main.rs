@@ -1,5 +1,6 @@
 use std::{collections::HashMap, panic::AssertUnwindSafe};
 
+use itertools::Itertools;
 use regex::Regex;
 
 fn main() -> anyhow::Result<()> {
@@ -18,7 +19,7 @@ fn main() -> anyhow::Result<()> {
     for line in lines {
         println!("processing line: '{0}'", line);
         if line.starts_with("$") {
-            let re = Regex::new(r"\$ ([a-z]+) ?([a-z/]+)?").unwrap();
+            let re = Regex::new(r"\$ ([a-z]+) ?([a-z/\.]+)?").unwrap();
             let temp = re.captures(line);
             let caps = temp.unwrap();
 
@@ -74,7 +75,7 @@ fn main() -> anyhow::Result<()> {
             println!("processing directory: '{0}'", dir_name);
             let mut temp_current_path = current_path.clone();
 
-            if !dir_name.contains("/") {
+            if !dir_name.contains("/") && !temp_current_path.ends_with("/") {
                 temp_current_path += "/";
             }
 
@@ -108,25 +109,47 @@ fn main() -> anyhow::Result<()> {
 
     println!("Lines parsed; calculating size.");
            
-    let mut dir_sizes: HashMap<String, i32> = HashMap::new();
+    let mut dir_sizes: HashMap<String, i64> = HashMap::new();
 
-    for (k,_) in &directories{
-        let mut dir_total:i32=0;
-        for key in files.keys().filter(|o| o.contains(k)){
-            let file_size = files.get(key).unwrap();
-            dir_total += file_size;
+    for k in directories.keys().sorted().rev(){
+        
+        // get all files in the directory
+        let mut dir_total:i64=0;
+        let files_subfiles = files.keys().filter(|o| o.contains(k)).collect::<Vec<&String>>();
+        if files_subfiles.len() ==0{
+            println!("Directory {0} has no files", k);
         }
+        for key in files_subfiles {
+            let file_size = files.get(key).unwrap();
+            dir_total = dir_total+( file_size.clone() as i64);
+        }
+
+        // get all directories in the directory (count twice)
+        let subdir = dir_sizes.keys().filter(|o| o.contains(k)).collect::<Vec<&String>>();
+        if subdir.len() ==0{
+            println!("Directory {0} has no files", k);
+        }
+        for key in subdir {
+            let dir_size = dir_sizes.get(key).unwrap();
+            dir_total += dir_size;
+        }
+
         dir_sizes.insert(k.clone(), dir_total);
     }
  
-   // print!("{:?}",files);
+   // print!("{:?}",dir_sizes);
+    // for k in dir_sizes.keys().sorted(){
+    //     println!("{0} - {1}" ,k ,dir_sizes.get(k).unwrap());
+    // }
+    
 
-    let mut small_dir_sizes:i32 = 0;
+    let mut small_dir_sizes:i64 = 0;
     for i in dir_sizes.values().filter(|v| v <= &&100000){
-        small_dir_sizes += i;
+        small_dir_sizes += i.clone() as i64;
     }
 
     // 28366 is too low
+    // 1685109 is too low
     println!("total size of dirs under 100000: {0}", small_dir_sizes);
     Ok(())
 }
