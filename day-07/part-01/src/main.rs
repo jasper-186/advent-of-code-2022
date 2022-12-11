@@ -6,17 +6,17 @@ fn main() -> anyhow::Result<()> {
     let lines = include_str!("../../input").lines();
 
     let mut directories: HashMap<String, Directory> = HashMap::new();
+    let mut files: HashMap<String, i32> = HashMap::new();
     let mut current_path = "".to_string();
     let  current_directory: Directory = Directory {
         full_name: "/".to_string(),
         parent: "".to_string(),
-        files: HashMap::new(),
+      //  files: HashMap::new(),
     };
     directories.insert("/".to_string(), current_directory);
 
     for line in lines {
         println!("processing line: '{0}'", line);
-        println!("directory count: '{0}'", directories.len());
         if line.starts_with("$") {
             let re = Regex::new(r"\$ ([a-z]+) ?([a-z/]+)?").unwrap();
             let temp = re.captures(line);
@@ -41,9 +41,10 @@ fn main() -> anyhow::Result<()> {
                     let parent_dir = directories.get(&parent_dir_name);
                     temp_current_path = parent_dir.unwrap().full_name.clone();
                 } else {
-                    if !arg.contains("/") {
+                    if !arg.ends_with("/") && !temp_current_path.ends_with("/") {
                         temp_current_path += "/";
                     }
+
                     temp_current_path += arg;
 
                     let existing_dir = directories.contains_key(&temp_current_path).clone();
@@ -56,7 +57,7 @@ fn main() -> anyhow::Result<()> {
                                 .unwrap()
                                 .full_name
                                 .clone(),
-                            files: HashMap::new(),
+                         //   files: HashMap::new(),
                         };
                         directories.insert(temp_current_path.clone(), n);
                     }
@@ -83,14 +84,15 @@ fn main() -> anyhow::Result<()> {
                 // name: dir_name.to_string(),
                 full_name: temp_current_path.clone(),
                 parent: current_path.clone(),
-                files: HashMap::new(),
+               // files: HashMap::new(),
             };
 
             directories.insert(temp_current_path, n);
         } else {
             // {size} {filename}
-
             let parent_directory = current_path.clone();
+
+            println!("processing file: '{0}'", line);
 
             let re = Regex::new(r"([0-9]+) ([a-z\.]+)").unwrap();
             let caps = re.captures(line).unwrap();
@@ -99,50 +101,38 @@ fn main() -> anyhow::Result<()> {
                 .map_or(0, |m| m.as_str().parse::<i32>().unwrap());
             let file_name = caps.get(2).map_or("", |m| m.as_str());
 
-            println!("processing file: '{0}'", file_name);
-            directories
-                .get_mut(&parent_directory)
-                .unwrap()
-                .files
-                .insert(file_name.to_string(), file_size);
+            let file_full_name = parent_directory+"/"+file_name;
+            files.insert(file_full_name, file_size);
         }
     }
 
-    let mut total =0;
-    for (_,d) in &directories{
-        let t = d.get_size(&directories);
-        if t > 100000{
-            continue;
+    println!("Lines parsed; calculating size.");
+           
+    let mut dir_sizes: HashMap<String, i32> = HashMap::new();
+
+    for (k,_) in &directories{
+        let mut dir_total:i32=0;
+        for key in files.keys().filter(|o| o.contains(k)){
+            let file_size = files.get(key).unwrap();
+            dir_total += file_size;
         }
-        total = total+t;
+        dir_sizes.insert(k.clone(), dir_total);
     }
  
+   // print!("{:?}",files);
 
-    println!("total size of dirs under 100000: {0}", total);
+    let mut small_dir_sizes:i32 = 0;
+    for i in dir_sizes.values().filter(|v| v <= &&100000){
+        small_dir_sizes += i;
+    }
+
+    // 28366 is too low
+    println!("total size of dirs under 100000: {0}", small_dir_sizes);
     Ok(())
 }
+
+#[derive(Debug)]
 struct Directory {
     full_name: String,
     parent: String,
-    files: HashMap<String, i32>,
-}
-
-impl Directory {
-    pub fn get_size(&self, directories_list: &HashMap<String, Directory>) -> i32 {
-        let keys = directories_list
-            .keys()
-            .filter(|k| k.contains(&self.full_name));
-
-        let mut total_size = 0;
-        for i in keys {
-            let d = directories_list.get(i).unwrap();
-            total_size = total_size + d.get_size(directories_list);
-        }
-
-        for (_, i) in &self.files {
-            total_size = total_size + i;
-        }
-
-        return total_size;
-    }
 }
