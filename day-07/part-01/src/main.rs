@@ -74,7 +74,7 @@ fn main() -> anyhow::Result<()> {
             }
         } else if line.starts_with("dir") {
             // dir {dirname}
-            let re = Regex::new(r"dir ([a-z]+)").unwrap();
+            let re = Regex::new(r"dir ([a-z\.]+)").unwrap();
             let caps = re.captures(line).unwrap();
             let dir_name = caps.get(1).map_or("", |m| m.as_str());
 
@@ -107,6 +107,7 @@ fn main() -> anyhow::Result<()> {
                 .map_or(0, |m| m.as_str().parse::<i64>().unwrap());
             let file_name = caps.get(2).map_or("", |m| m.as_str());
             
+
             let mut spacer = "";
             if !file_name.contains("/") && !parent_directory.ends_with("/") {
                 spacer = "/";
@@ -134,7 +135,8 @@ fn main() -> anyhow::Result<()> {
         println!("finding size for dir {0}", k);
         // get all files in the directory
         let mut dir_total:i64=0;
-        let files_subfiles = files.keys().filter(|o| o.contains(k)).collect::<Vec<&String>>();
+        let contains_string = k.to_string()+"/";
+        let files_subfiles = files.keys().filter(|o| o.contains(&contains_string)).collect::<Vec<&String>>();
         if files_subfiles.len() ==0{
             println!("Directory {0} has no files", k);
         }else{
@@ -147,12 +149,12 @@ fn main() -> anyhow::Result<()> {
         }
 
         // get all directories in the directory (count twice)
-        let subdir = dir_sizes.keys().filter(|o| o.contains(k)).collect::<Vec<&String>>();
-        if subdir.len() ==0{
-            println!("Directory {0} has no directories", k);
-        }else{
-            println!("Directory {0} has {1} directories", k,subdir.len());
-        }
+        // let subdir = dir_sizes.keys().filter(|o| o.contains(k)).collect::<Vec<&String>>();
+        // if subdir.len() ==0{
+        //     println!("Directory {0} has no directories", k);
+        // }else{
+        //     println!("Directory {0} has {1} directories", k,subdir.len());
+        // }
         
         // for key in subdir {
         //     let dir_size = dir_sizes.get(key).unwrap();
@@ -168,13 +170,13 @@ fn main() -> anyhow::Result<()> {
     // }
     println!("Files Layout:");
     for key in files.keys().sorted(){
-        println!("{0} - {1}", format!("{:0>10}",  files.get( key).unwrap()),key);
+        println!("{0} - {1}", format!("{:0>10}",  files.get(key).unwrap()),key);
     }
 
-    println!("directory Layout:");
-    for key in dir_sizes.keys().sorted(){
-        println!("{0} - {1}",   format!("{:0>10}",  dir_sizes.get( key).unwrap())   ,key);
-    }
+    // println!("directory Layout:");
+    // for key in dir_sizes.keys().sorted(){
+    //     println!("{0} - {1}",   format!("{:0>10}",  dir_sizes.get( key).unwrap())   ,key);
+    // }
 
     let mut small_dir_sizes:i64 = 0;
     for i in dir_sizes.values().filter(|v| v < &&100000){
@@ -184,11 +186,9 @@ fn main() -> anyhow::Result<()> {
     println!("total file count {0}", files.len());
 
     println!("total dir count {0}", dir_sizes.len());
-    // 28366 is too low
-    // 1685109 is too low
-    // 1493167
     
     // 1685109 is not the right answer
+    // {1743217}
     println!("total size of dirs under 100000: {0}", small_dir_sizes);
     Ok(())
 }
