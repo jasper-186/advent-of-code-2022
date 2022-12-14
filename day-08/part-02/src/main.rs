@@ -4,8 +4,8 @@ use itertools::Itertools;
 use regex::Regex;
 
 fn main() -> anyhow::Result<()> {
-    let lines = include_str!("../../input").lines();
-    let mut grove = [[-1i32; 100]; 100];
+    let lines = include_str!("../../test-input").lines();
+    let mut grove: Vec<Vec<i32>> = Vec::new();
 
     /*
 
@@ -19,14 +19,14 @@ fn main() -> anyhow::Result<()> {
     for (i, item) in lines.enumerate() {
         // each column will have at least 2 trees visible (outer perimeter)
         // trees_visible += 2;
-
+        grove.insert(i, Vec::new());
         for (j, height_str) in item.chars().enumerate() {
             // if i == 0 {
             //     // each row will have at least 2 visible (outer perimeter)
             //     //       trees_visible += 2;
             // }
 
-            grove[i][j] = height_str.to_digit(10).unwrap() as i32;
+            grove[i].insert(j, height_str.to_digit(10).unwrap() as i32);
         }
     }
 
@@ -42,8 +42,8 @@ fn main() -> anyhow::Result<()> {
     for i in 0..grove_ver_size {
         for j in 0..grove_hoz_size {
             let test = i;
-            let scenic_score = calculate_scenic_score(&(i,j), &grove);
-            
+            let scenic_score = calculate_scenic_score(&(i, j), &grove);
+
             if scenic_score > max_scenic_score {
                 max_scenic_score = scenic_score;
             }
@@ -58,42 +58,54 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn calculate_scenic_score(point: &(usize, usize), map: &[[i32; 100]; 100]) -> i32 {
+fn calculate_scenic_score(point: &(usize, usize), map: &Vec<Vec<i32>>) -> i32 {
     let mut north_score: i32 = 0;
     let mut east_score: i32 = 0;
     let mut south_score: i32 = 0;
     let mut west_score: i32 = 0;
 
+    // point(y,x)
+    // point(j,i)
+
     // Looking North (up)
     let point_height = map[point.0][point.1];
-    for j in (0..(point.1 )).rev() {
-        north_score += 1;
-        if map[point.0][j] >= point_height {
-            break;
+    if point.0 > 0 {
+        for j in (0..(point.0)).rev() {
+            north_score += 1;
+            if map[j][point.1] >= point_height {
+                break;
+            }
         }
     }
 
-    // Looking East (right)
-    for i in point.0..(map[0].len()  ) {
-        east_score += 1;
-        if map[i][point.1] >= point_height {
-            break;
+    if point.1 < map[point.0].len() - 1 {
+        // Looking East (right)
+        for i in point.1..(map[point.0].len()) {
+           
+            east_score += 1;
+            if map[point.0][i] >= point_height {
+                break;
+            }
         }
     }
 
     // Looking South (down)
-    for j in point.1..(map.len() ) {
-        south_score += 1;
-        if map[point.0][j] >= point_height {
-            break;
+    if point.0 < map.len() - 1 {
+        for j in point.0..(map.len()) {
+            south_score += 1;
+            if map[j][point.1] >= point_height {
+                break;
+            }
         }
     }
 
-    // Looking West (left)
-    for i in (0..(point.0 )).rev() {
-        west_score += 1;
-        if map[i][point.1] >= point_height {
-            break;
+    if point.1 > 0 {
+        // Looking West (left)
+        for i in (0..(point.1)).rev() {
+            west_score += 1;
+            if map[point.0][i] >= point_height {
+                break;
+            }
         }
     }
 
