@@ -1,199 +1,102 @@
-use std::{collections::HashMap};
+use std::collections::{HashMap, HashSet};
 
 use itertools::Itertools;
 use regex::Regex;
 
 fn main() -> anyhow::Result<()> {
     let lines = include_str!("../../input").lines();
+    let mut grove = [[-1i32; 100]; 100];
 
-    let mut directories: HashMap<String, Directory> = HashMap::new();
-    let mut files: HashMap<String, i64> = HashMap::new();
-    let mut current_path = "".to_string();
-    // let  current_directory: Directory = 
-    directories.insert("/".to_string(), Directory {
-            full_name: "/".to_string(),
-            parent: "".to_string(),
-          //  files: HashMap::new(),
-        });
+    /*
 
-    for line in lines {
-        //println!("processing line: '{0}'", line);
-        if line.starts_with("$") {
-            let re = Regex::new(r"\$ ([a-z]+) ?([a-z/\.]+)?").unwrap();
-            let temp = re.captures(line);
-            let caps = temp.unwrap();
+        // Grid Reference
+        // 0,0 -> j,0
+        //  |
+        //  V
+        // 0,i
+    */
 
-            let cmd = caps.get(1).map_or("", |m| m.as_str());
-            // println!("processing command: '{0}'", cmd);
-           
-            if cmd == "ls" {                
-             //   println!("current_path     {0}",current_path);                
-                continue;
-            }
+    for (i, item) in lines.enumerate() {
+        // each column will have at least 2 trees visible (outer perimeter)
+        // trees_visible += 2;
 
-            let arg = caps.get(2).map_or("", |m| m.as_str());
+        for (j, height_str) in item.chars().enumerate() {
+            // if i == 0 {
+            //     // each row will have at least 2 visible (outer perimeter)
+            //     //       trees_visible += 2;
+            // }
 
-            if cmd == "cd" {
-                let parent_directory = current_path.clone();
-                let mut temp_current_path = current_path.clone();
-                // println!("Changing directory to {0}",arg);
-                // println!("current_path     {0}",current_path);
-                
-                // go to the parent directory
-                if arg == ".." {
-                    let parent_dir_name =
-                        directories.get(&parent_directory).unwrap().parent.clone();
-                    let parent_dir = directories.get(&parent_dir_name);
-                    temp_current_path = parent_dir.unwrap().full_name.clone();
-                } else {
-                    if !arg.ends_with("/") && !temp_current_path.ends_with("/") {
-                        temp_current_path += "/";
-                    }
+            grove[i][j] = height_str.to_digit(10).unwrap() as i32;
+        }
+    }
 
-                    temp_current_path += arg;
+    // we over counted by 4 trees, at the verticies of top/left top/right bottom/left bottom/right
+    // trees_visible -= 4;
 
-                    let existing_dir = directories.contains_key(&temp_current_path).clone();
-                    if !existing_dir {
-                        let n = Directory {
-                            //   name: arg.to_string(),
-                            full_name: temp_current_path.clone(),
-                            parent: directories
-                                .get(&parent_directory)
-                                .unwrap()
-                                .full_name
-                                .clone(),
-                         //   files: HashMap::new(),
-                        };
-                        directories.insert(temp_current_path.clone(), n);
-                    }
-                }
+    let grove_hoz_size = grove[0].len();
+    let grove_ver_size = grove.len();
+    // time to start scanning the grove
 
-                current_path = temp_current_path.clone();
-
-                //println!("new current_path {0}",current_path);
-            }
-        } else if line.starts_with("dir") {
-            // dir {dirname}
-            let re = Regex::new(r"dir ([a-z\.]+)").unwrap();
-            let caps = re.captures(line).unwrap();
-            let dir_name = caps.get(1).map_or("", |m| m.as_str());
-
-            //println!("processing directory: '{0}'", dir_name);
-            let mut temp_current_path = current_path.clone();
-
-            if !dir_name.contains("/") && !temp_current_path.ends_with("/") {
-                temp_current_path += "/";
-            }
-
-            temp_current_path += dir_name;
-
-            let n = Directory {
-                // name: dir_name.to_string(),
-                full_name: temp_current_path.clone(),
-                parent: current_path.clone(),
-               // files: HashMap::new(),
-            };
-
-            directories.insert(temp_current_path, n);
-        } else {
-            // {size} {filename}
-            let parent_directory = current_path.clone();
-
+    let mut max_scenic_score = 0;
+    // West (looking left, right side, i->0)
+    for i in 0..grove_ver_size {
+        for j in 0..grove_hoz_size {
+            let test = i;
+            let scenic_score = calculate_scenic_score(&(i,j), &grove);
             
-            let re = Regex::new(r"([0-9]+) ([a-z\.]+)").unwrap();
-            let caps = re.captures(line).unwrap();
-            let file_size = caps
-                .get(1)
-                .map_or(0, |m| m.as_str().parse::<i64>().unwrap());
-            let file_name = caps.get(2).map_or("", |m| m.as_str());
-            
-
-            let mut spacer = "";
-            if !file_name.contains("/") && !parent_directory.ends_with("/") {
-                spacer = "/";
+            if scenic_score > max_scenic_score {
+                max_scenic_score = scenic_score;
             }
-
-
-            let file_full_name = parent_directory+spacer+file_name;
-            //println!("current_path     {0}",current_path);
-           // println!("fileFullName     {0}",file_full_name);
-            // println!("processing file: '{0}'", line);
-            // println!("current path: '{0}'", current_path);
-            // println!("file name: '{0}'", file_name);
-            // println!("file full name: '{0}'", file_full_name);
-
-            files.insert(file_full_name, file_size);
         }
     }
 
-    println!("Lines parsed; calculating size.");
-           
-    let mut dir_sizes: HashMap<String, i64> = HashMap::new();
-    let directories_sorted = directories.keys().sorted_by(|a,b| a.len().cmp(&b.len())).rev();
-
-    for k in directories_sorted{
-        println!("finding size for dir {0}", k);
-        // get all files in the directory
-        let mut dir_total:i64=0;
-        let mut contains_string = k.to_string();
-        if !contains_string.ends_with("/"){
-            contains_string+="/";
-            }
-        let files_subfiles = files.keys().filter(|o| o.contains(&contains_string)).collect::<Vec<&String>>();
-        if files_subfiles.len() ==0{
-            println!("Directory {0} has no files", k);
-        }else{
-            println!("Directory {0} has {1} files", k,files_subfiles.len());
-        }
-
-        for key in files_subfiles {
-            let file_size = files.get(key).unwrap();
-            dir_total = dir_total+( file_size.clone() as i64);
-        }
-
-        // get all directories in the directory (count twice)
-        // let subdir = dir_sizes.keys().filter(|o| o.contains(k)).collect::<Vec<&String>>();
-        // if subdir.len() ==0{
-        //     println!("Directory {0} has no directories", k);
-        // }else{
-        //     println!("Directory {0} has {1} directories", k,subdir.len());
-        // }
-        
-        // for key in subdir {
-        //     let dir_size = dir_sizes.get(key).unwrap();
-        //     dir_total += dir_size;
-        // }
-
-        dir_sizes.insert(k.clone(), dir_total);
-    }
- 
-    // total file size
-    // 70000000
-
-    // required size for Update
-    let update_requires:i64= 30000000;
-
-    // get current total size, so we know how much to free up
-    let current_size = dir_sizes.get("/");
-    let current_free:i64 = 70000000 - current_size.unwrap();
-    let needed_size = update_requires-current_free;
-    println!("current_size: {0}", current_size.unwrap());
-    println!("needed_size: {0}", needed_size);
-    for d in dir_sizes.values().sorted_by(|k,v| k.cmp(v) ){
-        if d<&needed_size {
-            continue;
-        }
-
-        println!("Size of dir to delete {0}", d);
-        break;
-    }
-
-    // 8319096 is right
+    // 1175 is too low
+    println!(
+        "The highest scenic score possible for any tree is {0}",
+        max_scenic_score
+    );
     Ok(())
 }
 
-#[derive(Debug)]
-struct Directory {
-    full_name: String,
-    parent: String,
+fn calculate_scenic_score(point: &(usize, usize), map: &[[i32; 100]; 100]) -> i32 {
+    let mut north_score: i32 = 0;
+    let mut east_score: i32 = 0;
+    let mut south_score: i32 = 0;
+    let mut west_score: i32 = 0;
+
+    // Looking North (up)
+    let point_height = map[point.0][point.1];
+    for j in (0..(point.1 )).rev() {
+        north_score += 1;
+        if map[point.0][j] >= point_height {
+            break;
+        }
+    }
+
+    // Looking East (right)
+    for i in point.0..(map[0].len()  ) {
+        east_score += 1;
+        if map[i][point.1] >= point_height {
+            break;
+        }
+    }
+
+    // Looking South (down)
+    for j in point.1..(map.len() ) {
+        south_score += 1;
+        if map[point.0][j] >= point_height {
+            break;
+        }
+    }
+
+    // Looking West (left)
+    for i in (0..(point.0 )).rev() {
+        west_score += 1;
+        if map[i][point.1] >= point_height {
+            break;
+        }
+    }
+
+    let total_scenic_score = north_score * east_score * south_score * west_score;
+    return total_scenic_score;
 }
