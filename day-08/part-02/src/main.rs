@@ -4,7 +4,7 @@ use itertools::Itertools;
 use regex::Regex;
 
 fn main() -> anyhow::Result<()> {
-    let lines = include_str!("../../test-input").lines();
+    let lines = include_str!("../../input").lines();
     let mut grove: Vec<Vec<i32>> = Vec::new();
 
     /*
@@ -17,31 +17,24 @@ fn main() -> anyhow::Result<()> {
     */
 
     for (i, item) in lines.enumerate() {
-        // each column will have at least 2 trees visible (outer perimeter)
-        // trees_visible += 2;
         grove.insert(i, Vec::new());
         for (j, height_str) in item.chars().enumerate() {
-            // if i == 0 {
-            //     // each row will have at least 2 visible (outer perimeter)
-            //     //       trees_visible += 2;
-            // }
-
+           
             grove[i].insert(j, height_str.to_digit(10).unwrap() as i32);
         }
     }
 
-    // we over counted by 4 trees, at the verticies of top/left top/right bottom/left bottom/right
-    // trees_visible -= 4;
-
-    let grove_hoz_size = grove[0].len();
-    let grove_ver_size = grove.len();
+  
+    let grove_hoz_size = grove[0].len() -1;
+    let grove_ver_size = grove.len() -1 ;
+  
     // time to start scanning the grove
 
     let mut max_scenic_score = 0;
+
     // West (looking left, right side, i->0)
-    for i in 0..grove_ver_size {
-        for j in 0..grove_hoz_size {
-            let test = i;
+    for i in 1..grove_ver_size {
+        for j in 1..grove_hoz_size {
             let scenic_score = calculate_scenic_score(&(i, j), &grove);
 
             if scenic_score > max_scenic_score {
@@ -50,7 +43,7 @@ fn main() -> anyhow::Result<()> {
         }
     }
 
-    // 1175 is too low
+    // 536625 is the correct answer
     println!(
         "The highest scenic score possible for any tree is {0}",
         max_scenic_score
@@ -67,47 +60,46 @@ fn calculate_scenic_score(point: &(usize, usize), map: &Vec<Vec<i32>>) -> i32 {
     // point(y,x)
     // point(j,i)
 
-    // Looking North (up)
     let point_height = map[point.0][point.1];
-    if point.0 > 0 {
-        for j in (0..(point.0)).rev() {
+   
+    // Looking North (up)
+    let north_boundry =  point.0;
+        for j in (0..north_boundry).rev() {
             north_score += 1;
             if map[j][point.1] >= point_height {
                 break;
             }
         }
-    }
-
-    if point.1 < map[point.0].len() - 1 {
+    
         // Looking East (right)
-        for i in point.1..(map[point.0].len()) {
-           
+        let east_boundry =  map[point.0].len();
+        for i in (point.1+1)..east_boundry {           
             east_score += 1;
             if map[point.0][i] >= point_height {
                 break;
             }
         }
-    }
+    
 
     // Looking South (down)
-    if point.0 < map.len() - 1 {
-        for j in point.0..(map.len()) {
+    let south_boundry =  map.len();
+      
+        for j in (point.0+1)..south_boundry {
             south_score += 1;
             if map[j][point.1] >= point_height {
                 break;
             }
         }
-    }
-
-    if point.1 > 0 {
+    
         // Looking West (left)
-        for i in (0..(point.1)).rev() {
+        let west_boundry =  point.1;      
+        for i in (0..west_boundry).rev() {
             west_score += 1;
             if map[point.0][i] >= point_height {
                 break;
             }
         }
-    }
+    
 
     let total_scenic_score = north_score * east_score * south_score * west_score;
     return total_scenic_score;
