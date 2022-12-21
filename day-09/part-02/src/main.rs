@@ -1,106 +1,87 @@
-use std::collections::{HashMap, HashSet};
-
-use itertools::Itertools;
-use regex::Regex;
+use std::collections::HashSet;
 
 fn main() -> anyhow::Result<()> {
-    let lines = include_str!("../../input").lines();
-    let mut grove: Vec<Vec<i32>> = Vec::new();
+    let lines = include_str!("../../test-input-large").lines();
+    let mut all_tail_positions: HashSet<(i32, i32)> = HashSet::new();
 
-    /*
+    //let mut head_position: (i32, i32) = (0, 0);
+    let mut original_head_position: (i32, i32);
+    //let mut tail_position: (i32, i32) = (0, 0);
 
-        // Grid Reference
-        // 0,0 -> j,0
-        //  |
-        //  V
-        // 0,i
-    */
-
-    for (i, item) in lines.enumerate() {
-        grove.insert(i, Vec::new());
-        for (j, height_str) in item.chars().enumerate() {
-           
-            grove[i].insert(j, height_str.to_digit(10).unwrap() as i32);
-        }
+    let mut rope: Vec<(i32, i32)> = Vec::new();
+    for i in 0..10 {
+        rope.insert(i, (0, 0));
     }
 
-  
-    let grove_hoz_size = grove[0].len() -1;
-    let grove_ver_size = grove.len() -1 ;
-  
-    // time to start scanning the grove
+    // insert the orginal tail position
+    all_tail_positions.insert((0, 0));
+    for line in lines {
+        // parse line
+        let line_chars: Vec<&str> = line.split_ascii_whitespace().collect();
 
-    let mut max_scenic_score = 0;
+        let distance: u32 = line_chars[1].parse().unwrap();
 
-    // West (looking left, right side, i->0)
-    for i in 1..grove_ver_size {
-        for j in 1..grove_hoz_size {
-            let scenic_score = calculate_scenic_score(&(i, j), &grove);
+        //println!("{0} -> {1} {2}", line, line_chars[0], distance);
+        for _ in 0..distance {
+            // remember previous head position
+            original_head_position = rope[0];
 
-            if scenic_score > max_scenic_score {
-                max_scenic_score = scenic_score;
+            // move head
+            rope[0] = move_head(line_chars[0], rope[0]);
+
+            for i in 1..10 {
+                // move tail?
+                if does_tail_move(&rope[i - 1], &rope[i]) {
+                    let temp = rope[i];
+                    rope[i] = original_head_position;
+                    original_head_position = temp;
+                    if i == 9 {
+                        println!("({0},{1})", rope[i].0,rope[i].1);
+                        all_tail_positions.insert(rope[i]);
+                    }
+                } else {
+                    break;
+                }
             }
         }
     }
 
-    // 536625 is the correct answer
+    // 4883 is too high
     println!(
-        "The highest scenic score possible for any tree is {0}",
-        max_scenic_score
+        "The tail of the rope visit {0} positions at least one time",
+        all_tail_positions.len()
     );
     Ok(())
 }
 
-fn calculate_scenic_score(point: &(usize, usize), map: &Vec<Vec<i32>>) -> i32 {
-    let mut north_score: i32 = 0;
-    let mut east_score: i32 = 0;
-    let mut south_score: i32 = 0;
-    let mut west_score: i32 = 0;
+fn does_tail_move(head: &(i32, i32), tail: &(i32, i32)) -> bool {
+    let x_dist = (head.0 - tail.0).abs();
+    let y_dist = (head.1 - tail.1).abs();
 
-    // point(y,x)
-    // point(j,i)
+    if x_dist > 1 {
+        return true;
+    }
 
-    let point_height = map[point.0][point.1];
-   
-    // Looking North (up)
-    let north_boundry =  point.0;
-        for j in (0..north_boundry).rev() {
-            north_score += 1;
-            if map[j][point.1] >= point_height {
-                break;
-            }
-        }
-    
-        // Looking East (right)
-        let east_boundry =  map[point.0].len();
-        for i in (point.1+1)..east_boundry {           
-            east_score += 1;
-            if map[point.0][i] >= point_height {
-                break;
-            }
-        }
-    
+    if y_dist > 1 {
+        return true;
+    }
 
-    // Looking South (down)
-    let south_boundry =  map.len();
-      
-        for j in (point.0+1)..south_boundry {
-            south_score += 1;
-            if map[j][point.1] >= point_height {
-                break;
-            }
-        }
-    
-        // Looking West (left)
-        let west_boundry =  point.1;      
-        for i in (0..west_boundry).rev() {
-            west_score += 1;
-            if map[point.0][i] >= point_height {
-                break;
-            }
-        }
-    
+    return false;
+}
 
-    let total_scenic_score = north_score * east_score * south_score * west_score;
-    return total_scenic_score;
+fn move_head(direction: &str, current_position: (i32, i32)) -> (i32, i32) {
+    // println!(
+    //     "{0}",
+    //     direction
+    // );
+
+    match direction {
+        "U" => return (current_position.0, (current_position.1 + 1)),
+        "D" => return (current_position.0, (current_position.1 - 1)),
+        "L" => return ((current_position.0 - 1), current_position.1),
+        "R" => return ((current_position.0 + 1), current_position.1),
+        _ => {
+            return current_position;
+        }
+    };
 }
