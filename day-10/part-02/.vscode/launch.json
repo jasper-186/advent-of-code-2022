@@ -7,15 +7,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'part-02'",
+            "name": "Debug executable 'part-01'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=part-02",
-                    "--package=part-02"
+                    "--bin=part-01",
+                    "--package=part-01"
                 ],
                 "filter": {
-                    "name": "part-02",
+                    "name": "part-01",
                     "kind": "bin"
                 }
             },
@@ -25,16 +25,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'part-02'",
+            "name": "Debug unit tests in executable 'part-01'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=part-02",
-                    "--package=part-02"
+                    "--bin=part-01",
+                    "--package=part-01"
                 ],
                 "filter": {
-                    "name": "part-02",
+                    "name": "part-01",
                     "kind": "bin"
                 }
             },
